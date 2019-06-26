@@ -1,0 +1,14 @@
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_00.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_03.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_06.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_09.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_12.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_15.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_18.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_21.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_24.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_27.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_30.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_33.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_36.png
+/home/mizobuchi/ros_workspace/src/phaseshift/color_capture/cam_39.png
