@@ -537,7 +537,7 @@ void commandCallback(const std_msgs::Bool::ConstPtr& msg)
 
 
 	Size boardSize;
-	boardSize.width  = 7; //parser.get<int>("w");
+	boardSize.width  = 10; //parser.get<int>("w");
 	boardSize.height = 7; //parser.get<int>("h");
 
 	Size camSize, projPatternSize(120,120), projRealSize(640,400);

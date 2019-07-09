@@ -2,13 +2,3 @@
 /home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_03_y.exr
 /home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_06_y.exr
 /home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_09_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_12_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_15_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_18_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_21_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_24_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_27_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_30_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_33_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_36_y.exr
-/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded/cam_39_y.exr

@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
         //読み込みに失敗したときの処理
         return -1;
     }
-  cap.set(cv::CAP_PROP_FPS,5);
+  cap.set(cv::CAP_PROP_FPS,20);
   cap.set(CV_CAP_PROP_FRAME_WIDTH,1280);
   cap.set(CV_CAP_PROP_FRAME_HEIGHT,960);
   cv::Mat frame; //取得したフレーム
@@ -134,13 +134,13 @@ int main(int argc, char **argv) {
   int check = 0;
   //std::ofstream ofs("picture_List.txt");
   std::string fname;
-
-  std::string cmd1("v4l2-ctl -d /dev/video1 -c brightness=50");
+  std::string cmd1("v4l2-ctl -d /dev/video1 -c brightness=100");
   std::string cmd2("v4l2-ctl -d /dev/video1 -c exposure_auto=1");
   std::string cmd3("v4l2-ctl -d /dev/video1 -c exposure_auto_priority=0");
   std::string cmd4("v4l2-ctl -d /dev/video1 -c white_balance_temperature_auto=0");
-  std::string cmd5("v4l2-ctl -d /dev/video1 -c exposure_absolute=50");
+  std::string cmd5("v4l2-ctl -d /dev/video1 -c exposure_absolute=30");
   std::string cmd6("v4l2-ctl -d /dev/video1 -c focus_auto=0");
+  std::string cmd7("v4l2-ctl -d /dev/video1 -c gain=30");
   //std::string cmd("v4l2-ctl -d /dev/video1 -c brightness=255");
   system(cmd1.c_str());
   system(cmd3.c_str());
@@ -148,11 +148,10 @@ int main(int argc, char **argv) {
   system(cmd4.c_str());
   system(cmd5.c_str());
   system(cmd6.c_str());
+  system(cmd7.c_str());
   //system(cmd.c_str());
   //system(cmd.c_str());
-  //system(cmd.c_str());
-
-  cv::Size patternsize(7,7);
+  cv::Size patternsize(10,7);
   std::vector< cv::Point2f > corners;
 
   bool patternfound;

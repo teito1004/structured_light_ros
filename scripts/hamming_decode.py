@@ -7,6 +7,7 @@ import sys
 import argparse
 import cv2
 import pdb
+import matplotlib.pylab as plt
 
 LEFT = 1
 TOP  = 2
@@ -44,10 +45,11 @@ def gen_color_from_string ( str_array, k ):
 #
 # get_segment_imageから呼ばれる
 def get_seg(val, color_array):
-    dif = color_array - val / val.max() * 255.0
+    dif = color_array - val / (val.max()+1) * 255.0
     dif = abs(dif)
     dif = dif.sum(axis=1) # 0:行数が1行になる。, 1:列数が1になる
     id = np.argmin(dif)
+
     return id
 
 # 画像imgの輝度値をエンコードした色に対応させる。その結果を出力する。
@@ -55,11 +57,13 @@ def get_segment_image(img, mask, id_color):
     h, w = img.shape[:2]
 
     seg = np.zeros(img.shape[:2], dtype=np.int)
+
+
     for j in range(h):
         for i in range(w):
             if mask[j,i] > 0:
                 seg[j,i] = get_seg(img[j,i], id_color) + 1 # +1はH4がゼロ無いから
-
+                seg[j,i] += 1
     return seg
 
 def get_seg_seq(seg_img_scanline):
@@ -114,6 +118,7 @@ def get_seg_str_from_seg_id(seg_seq):
 # color_array : ハミングコード。IDの配列
 def decode_x(cap_v, mask, color_array, id_color):
     seg_img = get_segment_image(cap_v, mask, id_color)
+
     h, w = mask.shape[:2]
 
     decoded_img = np.zeros(mask.shape[:2], np.float32)
@@ -155,7 +160,7 @@ def callback(data):
     output_dir      = '/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded'
     output_8bit_dir = '/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_decoded_8bit'
     output_mask_dir = '/home/mizobuchi/ros_workspace/src/phaseshift/hamming_decoded/color_mask'
-    lit_thr         = 15
+    lit_thr         = 100
     blur_kernel     = 7
 
     fraw = open('/home/mizobuchi/ros_workspace/src/phaseshift/color_image_list/raw_image_list.txt','w')
@@ -183,20 +188,32 @@ def callback(data):
     #argInd = np.argsort([int(files[i][6:].split('.')[0]) for i in range(len(files))])
     files.sort()
     white_files = files[::3]
-    y_files     = files[1::3]
-    x_files     = files[2::3]
+    y_files     = files[2::3]
+    x_files     = files[1::3]
 
     set_num = len(x_files)
 
     for w_file, x_file, y_file in zip(white_files, x_files, y_files):
         print w_file, x_file, y_file
-
         cap_x = cv2.imread(os.path.join(input_dir, x_file)).astype(np.float32)
         cap_y = cv2.imread(os.path.join(input_dir, y_file)).astype(np.float32)
+        #-----------------
+        # rgb_threを基準に、RGB値を0か255に置き換える
+        for i in range(cap_x.shape[0]):
+            for j in range(cap_x.shape[1]):
+                th_num = cap_x[i][j][np.argmax(cap_x[i][j])]*0.9
+                cap_x[i][j][cap_x[i][j]<=th_num] = 0
+
+        rgb_thr = 180
+        cap_x[cap_x<=rgb_thr] = 0
+        cap_x[cap_x>rgb_thr] = 255
+        cap_y[cap_y<=rgb_thr] = 0
+        cap_y[cap_y>rgb_thr] = 255
+        #-----------------
 
         mask  = cv2.imread(os.path.join(input_dir, w_file), 0)
         mask[mask<=lit_thr] = 0
-        mask[mask>0]             = 255
+        mask[mask>0]        = 255
 
         decoded_x = decode_x(cap_x, mask, color_array, id_color)
         decoded_y = decode_y(cap_y, mask, color_array, id_color)
@@ -212,9 +229,9 @@ def callback(data):
         output_y_file = os.path.join(output_dir, os.path.splitext(w_file)[0] + '_y.exr')
         cv2.imwrite(output_x_file, decoded_x)
         cv2.imwrite(output_y_file, decoded_y)
-	fraw.write(output_raw_file+'\n')
-	fx.write(output_x_file+'\n')
-	fy.write(output_y_file+'\n')
+    	fraw.write(output_raw_file+'\n')
+    	fx.write(output_x_file+'\n')
+    	fy.write(output_y_file+'\n')
 
         output_8bit_x_file = os.path.join(output_8bit_dir, os.path.splitext(w_file)[0] + '_x.png')
         output_8bit_y_file = os.path.join(output_8bit_dir, os.path.splitext(w_file)[0] + '_y.png')
