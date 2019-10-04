@@ -51,11 +51,6 @@ enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 
 
-
-
-
-
-
 static std::vector<std::string> getStringList(const std::string& filename)
 {
 	std::vector<std::string> strArray;
@@ -310,6 +305,7 @@ StereoCalib(//Mat1d& Ac, Mat1d& Dc, Mat1d& Ap, Mat1d& Dp,
 	double err = 0;
 	int npoints = 0;
 	vector<Vec3f> lines[2];
+	float imgerr= 0.0;
 	for (i = 0; i < nimages; i++)
 	{
 		int npt = (int)imagePoints[0][i].size();
@@ -327,8 +323,13 @@ StereoCalib(//Mat1d& Ac, Mat1d& Dc, Mat1d& Ap, Mat1d& Dp,
 				fabs(imagePoints[1][i][j].x*lines[0][j][0] +
 				imagePoints[1][i][j].y*lines[0][j][1] + lines[0][j][2]);
 			err += errij;
+			imgerr +=errij;
 		}
 		npoints += npt;
+		printf("%d/%d\n",i,nimages);
+		printf("npt = %d \n",npt);
+		printf("%f\n",imgerr/npt);
+		imgerr = 0.0;
 	}
 	cout << "average reprojection err = " << err / npoints << endl;
 
@@ -495,7 +496,8 @@ static vector<Point2f> getProjPoints(const vector<Point2f>& camImagePoints,
 									 const Mat1f& xMap,
 									 const Mat1f& yMap,
 									 float        xScale,
-									 float        yScale)
+									 float        yScale,
+								 Size boardSize)
 {
 	vector<Point2f> projPoints(camImagePoints.size());
 
@@ -519,8 +521,26 @@ static vector<Point2f> getProjPoints(const vector<Point2f>& camImagePoints,
 		projPoints[i] = (1.0f - ty) * top + ty * bottom;
 		projPoints[i].x *= xScale;
 		projPoints[i].y *= yScale;
+		std::cout<<"cam[i]"<<camImagePoints[i]<<std::endl;
+		std::cout<<"projPoints[i]"<<projPoints[i]<<std::endl;
 	}
 
+	cv::Mat x_code = cv::imread("/home/mizobuchi/ros_workspace/src/phaseshift/hamming_color_code/pattern_x.png");
+	cv::Mat y_code = cv::imread("/home/mizobuchi/ros_workspace/src/phaseshift/hamming_color_code/pattern_y.png");
+/*
+	drawChessboardCorners(x_code, boardSize, projPoints, 1);
+	drawChessboardCorners(y_code, boardSize, projPoints, 1);
+
+	cv::namedWindow("xmap", cv::WINDOW_NORMAL);
+	cv::namedWindow("ymap", cv::WINDOW_NORMAL);
+	cv::imshow("xmap",x_code);
+	cv::imshow("ymap",y_code);
+
+	//fs::path colorcode_calib = "/home/mizobuchi/ros_workspace/src/phaseshift/calibration/chessboard_carib/";
+	cv::waitKey(0);
+	//cv::imwrite("xmap",x_code);
+	//cv::imwrite("ymap",y_code);
+*/
 	return projPoints;
 }
 
@@ -535,14 +555,19 @@ void commandCallback(const std_msgs::Bool::ConstPtr& msg)
 
 	//CommandLineParser parser(argc, argv, keys);
 
+	cv::Mat pat = cv::imread("/home/mizobuchi/ros_workspace/src/phaseshift/hamming_color_code/chessboard_6_10.jpg");
+	cv::Mat g_pat(pat.size(), CV_8UC1);
+	cv::cvtColor(pat, g_pat, CV_BGR2GRAY);
 
 	Size boardSize;
-	boardSize.width  = 10; //parser.get<int>("w");
-	boardSize.height = 7; //parser.get<int>("h");
+	boardSize.width  = 9; //parser.get<int>("w");
+	boardSize.height = 6; //parser.get<int>("h");
+
+	int dist = 10;//distance(camera to mirror)
 
 	Size camSize, projPatternSize(120,120), projRealSize(640,400);
 	Size subPixelBlockSize = Size(11, 11);
-	float squareSize = 0.036; //parser.get<float>("s");
+	float squareSize = 0.048; //parser.get<float>("s");
 	float aspectRatio = 1.f;
 
 	const char* outputCamFileName  = "/home/mizobuchi/ros_workspace/src/phaseshift/calibration/camera_data.yml";
@@ -576,25 +601,30 @@ void commandCallback(const std_msgs::Bool::ConstPtr& msg)
 			subPixelBlockSize.height = camSize.height / 100;
 		}
 
-		vector<Point2f> camPointbuf;
+
+		vector<Point2f> camPointbuf1;
+		vector<Point2f> camPointbuf2;
 
 		Mat1b viewGray;
 		cvtColor(view, viewGray, COLOR_BGR2GRAY);
 
-		bool found;
+		bool found1;
+		bool found2;
+
 		switch (pattern)
 		{
 		case CHESSBOARD:
 			//found = findChessboardCorners(view, boardSize, camPointbuf,
 				//CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
-			found = findChessboardCorners(viewGray, boardSize, camPointbuf);
+			found1 = findChessboardCorners(viewGray, boardSize, camPointbuf1);
+			found2 = findChessboardCorners(g_pat, boardSize, camPointbuf2);
 				///*CALIB_CB_ADAPTIVE_THRESH |*/ CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
 			break;
 		case CIRCLES_GRID:
-			found = findCirclesGrid(view, boardSize, camPointbuf);
+			found1 = findCirclesGrid(view, boardSize, camPointbuf1);
 			break;
 		case ASYMMETRIC_CIRCLES_GRID:
-			found = findCirclesGrid(view, boardSize, camPointbuf, CALIB_CB_ASYMMETRIC_GRID);
+			found1 = findCirclesGrid(view, boardSize, camPointbuf1, CALIB_CB_ASYMMETRIC_GRID);
 			break;
 		default:
 			fprintf(stderr, "Unknown pattern type\n");
@@ -606,16 +636,27 @@ void commandCallback(const std_msgs::Bool::ConstPtr& msg)
 		//if (pattern == CHESSBOARD && found) cornerSubPix(viewGray, camPointbuf, subPixelBlockSize,
 		//	Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.1));
 
-		if (found) {
-			Mat1f xMap = imread(xList[i], -1);
-			Mat1f yMap = imread(yList[i], -1);
+		if (found1 && found2) {
+			//Mat1f xMap = imread(xList[i], -1);
+			//Mat1f yMap = imread(yList[i], -1);
 
-			xScale = (float)projRealSize.width / (float)camSize.width ;
-			yScale = (float)projRealSize.height / (float)camSize.height;
+			//xScale = (float)projRealSize.width / (float)camSize.width ;
+			//yScale = (float)projRealSize.height / (float)camSize.height;
 
-			vector<Point2f> projPointbuf = getProjPoints(camPointbuf, xMap, yMap, xScale, yScale);
-			projPoints.push_back(projPointbuf);
-			camPoints.push_back(camPointbuf);
+			//vector<Point2f> projPointbuf = getProjPoints(camPointbuf1, xMap, yMap, xScale, yScale,boardSize);
+			//projPoints.push_back(projPointbuf);
+			projPoints.push_back(camPointbuf2);//Reference object
+			camPoints.push_back(camPointbuf1);//Mirrored reference object
+
+			/*cv::Mat impat = cv::imread("/home/mizobuchi/ros_workspace/src/phaseshift/hamming_color_code/chessboard_6_10.jpg");
+			drawChessboardCorners(impat, boardSize, camPointbuf2, 1);
+			cv::namedWindow("patmap", cv::WINDOW_NORMAL);
+			cv::imshow("patmap",impat);
+			//fs::path colorcode_calib = "/home/mizobuchi/ros_workspace/src/phaseshift/calibration/chessboard_carib/";
+			cv::waitKey(0);
+			//cv::imwrite("xmap",x_code);
+			//cv::imwrite("ymap",y_code);
+			*/
 		}
 
 	}
@@ -638,6 +679,7 @@ void commandCallback(const std_msgs::Bool::ConstPtr& msg)
 		runAndSave(outputCamFileName, camPoints, camSize, boardSize, pattern, squareSize, aspectRatio, flags, cameraMatrix, camDistCoeffs, writeExtrinsics, writePoints);
 		runAndSave(outputProjFileName, projPoints, projRealSize, boardSize, pattern, squareSize, aspectRatio, flags, projMatrix, projDistCoeffs, writeExtrinsics, writePoints);
 		StereoCalib(cameraMatrix, camDistCoeffs, projMatrix, projDistCoeffs, boardSize, pattern, camSize, squareSize, imagePoints);
+
 #else
 		StereoCalib(boardSize, pattern, camSize, squareSize, imagePoints);
 #endif
