@@ -18,6 +18,7 @@ def camera_pointToRTmat(posture,corners):
     camera_refarence_point = []
     camera_point_array =np.array([])
     RT_mat = np.array([])
+    tj =[]
 
     for p_num in range(len(posture)):
         M = []
@@ -33,23 +34,22 @@ def camera_pointToRTmat(posture,corners):
             m_num.append(e_vector[np.argmin(e_value)])
 
         Normal_vector.append(np.cross(m_num[0],m_num[1])/np.linalg.norm(np.cross(m_num[0],m_num[1])))
-        pdb.set_trace()
         if Normal_vector[p_num][2] > 0:
             Normal_vector[p_num] *= -1
 
-        tj = np.dot(Normal_vector[p_num][np.newaxis,:],corners_all_array[p_num].T).T+CtoM_dist[p_num]
-        camera_refarence_point.append((-2*(np.dot(Normal_vector[p_num][np.newaxis,:],corners_all_array[p_num].T).T+CtoM_dist[p_num]))*Normal_vector[p_num]+corners_all_array[p_num])
+        tj.append(np.dot(Normal_vector[p_num][np.newaxis,:],corners_all_array[p_num].T).T+CtoM_dist[p_num])
+        camera_refarence_point.append(-2*(tj[p_num])*Normal_vector[p_num]+corners_all_array[p_num])
 
         if camera_point_array.shape[0] == 0:
             camera_point_array = np.append(camera_refarence_point[p_num],np.ones([camera_refarence_point[p_num].shape[0],1]),axis=1).T
         else :
             camera_point_array = np.append(camera_point_array,np.append(camera_refarence_point[p_num],np.ones([camera_refarence_point[p_num].shape[0],1]),axis=1).T,axis=1)
 
-    return camera_refarence_point,camera_point_array,Normal_vector
+    return camera_refarence_point,camera_point_array,Normal_vector,tj
 
 cols = 9 #chessboardの横方向の交点の数
 rows = 6 #chessboardの縦方向の交点の数
-CtoM_dist = np.array([0.492,0.520,0.522,0.479,0.475])#カメラと平面鏡の距離を測ったもの
+CtoM_dist = np.array([0.462,0.484,0.462,0.479,0.475,0.436,0.436,0.436])#カメラと平面鏡の距離を測ったもの
 square_size = 0.048 #単位(m)
 
 View_angle = 78
@@ -84,7 +84,6 @@ for sample in img:
     center_z = np.sqrt(center_h**2 + center_w**2 )/np.tan(cam_rad)
     #チェスボードが見つかるかの判定
     c_flag, corners = cv2.findChessboardCorners(gray, (cols, rows))
-
     if c_flag:
         #整形
         corners = corners.reshape(corners.shape[0],corners.shape[2])
@@ -133,14 +132,13 @@ for i in range(chess_corners.shape[0]):
 chess_board_array = np.append(np.array(chess_corners_m),np.ones([np.array(chess_corners_m).shape[0],1]),axis=1).T
 #-------------ここから計算-------------
 
-posture = [0,1,2]
+posture = [1,2,0]
 
 #Mjj'
-camera_refarence_point,camera_point_array,Nj = camera_pointToRTmat(posture,corners_all_m)
+camera_refarence_point,camera_point_array,Nj,tj = camera_pointToRTmat(posture,corners_all_m)
 RT_mat = np.dot(camera_point_array,np.linalg.pinv(np.tile(chess_board_array,(1,3))))
 #pdb.set_trace()
 print('RT_mat:{}'.format(RT_mat))
-
 '''
 R = RT_mat[i][0:3,0:3]
 T = RT_mat[i][0:3,3]
@@ -157,10 +155,19 @@ ax.set_zlabel("Z")
 #.plotで描画
 #linestyle='None'にしないと初期値では線が引かれるが、3次元の散布図だと大抵ジャマになる
 #markerは無難に丸
+mirrored_point = (corners_all_m[posture[0]] + (-np.dot(tj[0],Nj[0][np.newaxis]))).T
+print('mirrored_point zpoint_means:{}\ntrue zpoint{}'.format(np.mean(mirrored_point[2]),CtoM_dist[0]))
+
+ax.plot(mirrored_point[0],mirrored_point[1],mirrored_point[2],marker="o",linestyle='None',color='magenta')
 ax.plot(camera_refarence_point[0].T[0],camera_refarence_point[0].T[1],camera_refarence_point[0].T[2],marker="o",linestyle='None',color='red')
-ax.plot(corners_all_m[0].T[0],corners_all_m[0].T[1],corners_all_m[0].T[2],marker="o",linestyle='None',color='blue')
+ax.plot(corners_all_m[posture[0]].T[0],corners_all_m[posture[0]].T[1],corners_all_m[posture[0]].T[2],marker="o",linestyle='None',color='blue')
+'''
+dict_mirror = camera_refarence_point[0].T - (camera_refarence_point[0].T-corners_all_m[0].T)/2
+ax.plot(dict_mirror[0],dict_mirror[1],dict_mirror[2],marker="o",linestyle='None',color='lightstategray')
+'''
+
 ax.plot([0],[0],[0],marker="o",linestyle='None',color='green')
-ax.plot([Nj[0][0]],[Nj[0][1]],[Nj[0][2]],marker="o",linestyle='None',color='cyan')
+ax.plot([Nj[0][0]],[Nj[0][1]],[Nj[0][2]],marker="o",color='cyan')
 
 #最後に.show()を書いてグラフ表示
 plt.show()
